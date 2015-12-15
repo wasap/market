@@ -1,0 +1,31 @@
+{
+  "name": "market",
+  "description": "",
+  "version": "0.0.1",
+  "main": "./market.js",
+  "author": {
+    "name": "q",
+    "email": "omind@mail.ru"
+  },
+  "keywords": [],
+  "licenses": {
+    "type": "none"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/wasap/market.git"
+  },
+  "bugs": {
+    "url": "http://github.com/wasap/market/issues"
+  },
+  "dependencies": {
+    "fs": ">0.0.1",
+    "mime": ">0.0.1",
+    "path": ">0.0.1",
+    "ws": ">0.0.1"
+  },
+    "scripts": {
+        "start": "node market.js"
+    }
+
+}
