@@ -741,7 +741,8 @@
                 if (my) {
                     var delAvatar = document.createElement('div');
                     delAvatar.className = 'closeBtn';
-                    delAvatar.onclick = function () {
+                    delAvatar.onclick = function (e) {
+                            e.stopPropagation();
                         ws.send(JSON.stringify({sys: "delAvatar"}))
                     }
                     avatarView.appendChild(delAvatar);
