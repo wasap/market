@@ -613,7 +613,7 @@
                         notify.onshow = function () {
                             setTimeout(function () {
                                 notify.close();
-                                console.log('notification closed')
+                                console.log('notification closed '+options.popupTime * 1000 + 'ms')
                             }, options.popupTime * 1000)
                         }
                     }
