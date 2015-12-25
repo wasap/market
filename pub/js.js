@@ -5,7 +5,7 @@
  */
 
         (function () {
-            var ws, tbody, user, id, bg, orders = [], filterEl = {}, dialogUsersList, isadmin, dialogMyProfile;
+            var ws, tbody, user, id, bg, orders = [], filterEl = {}, dialogUsersList, isadmin, dialogMyProfile, options;
             startWs();
             if (Notification)
                 if (Notification.permission !== "granted")
@@ -31,6 +31,8 @@
                                 break;
                             case 'login':
                                 isadmin = data.isadmin;
+                                var obj = {};
+                                options = data.options || obj;
                                 login(data.name);
                                 break;
                             case 'ordersList':
@@ -117,10 +119,18 @@
                 inp.placeholder = 'login';
                 inp.className = 'loginInput';
                 box.appendChild(inp);
+                inp.onkeydown=function(e){
+                    if(e.keyCode==13)
+                        btn.onclick.apply();
+                }
                 var pass = document.createElement('input');
                 pass.placeholder = 'password';
                 pass.className = 'loginInput';
                 pass.setAttribute('type', 'password');
+                pass.onkeydown=function(e){
+                    if(e.keyCode==13)
+                        btn.onclick.apply();
+                }
                 box.appendChild(pass);
                 var btn = document.createElement('div');
                 btn.id = 'loginBtn';
@@ -589,7 +599,7 @@
                     tr.className = 'newItem';
                     tr.scrollIntoView();
                 }
-                if (document.hidden) {
+                if (document.hidden && item.time>new Date()-50000 && !options.disablePopup) {
                     var notify;
                     if (navigator.platform.indexOf('Linux') != null)
                         notify = new Notification(item.user + (item.type == 'sell' ? ' sells' : ' buys'), {body: item.amount + ' ' + item.curr + ' Rate: ' + item.rate});
@@ -598,6 +608,11 @@
                     notify.onclick = function () {
                         tr.className = 'newItem';
                         tr.scrollIntoView();
+                    }
+                    if(options.popupTime){
+                        notify.onshow=function(){
+                            setTimeout(function(){notify.close();console.log('notification closed')},options.popupTime*1000)
+                        }
                     }
                 }
             }
@@ -697,7 +712,7 @@
                 var progressBar = document.createElement('div');
                 var title = document.createElement('div');
                 title.className = 'profile Title';
-                title.innerHTML = data.user+ '\'s profile';
+                title.innerHTML = data.user + '\'s profile';
                 dialogMyProfile.appendChild(title);
                 if (my) {
                     var avatarInput = document.createElement('input');
@@ -730,10 +745,10 @@
                 }
                 var avatarView = document.createElement('div');
                 avatarView.className = 'avatarView';
-                if(my)
-                    avatarView.onclick=function(e){
-                       // e.stopPropagation();
-                      avatarInput.click();  
+                if (my)
+                    avatarView.onclick = function (e) {
+                        // e.stopPropagation();
+                        avatarInput.click();
                     }
                 dialogMyProfile.appendChild(avatarView);
                 if (data.image != null)
@@ -742,7 +757,7 @@
                     var delAvatar = document.createElement('div');
                     delAvatar.className = 'closeBtn';
                     delAvatar.onclick = function (e) {
-                            e.stopPropagation();
+                        e.stopPropagation();
                         ws.send(JSON.stringify({sys: "delAvatar"}))
                     }
                     avatarView.appendChild(delAvatar);
@@ -814,7 +829,66 @@
             }
 
             function showsettings() {
+                var bg = document.createElement('div');
+                var box = document.createElement('div')
+                bg.className = 'bg';
+                document.body.appendChild(bg);
+                bg.onclick = function () {
+                    document.body.removeChild(bg);
+                    box.innerHTML = '';
+                }
+                bg.appendChild(box);
+                box.className = 'optionsBox';
+                box.onclick = function (e) {
+                    e.stopPropagation();
+                }
 
+                var title = document.createElement('div');
+                title.className = 'optionsTitle';
+                title.innerHTML = 'Options';
+                box.appendChild(title);
+                var disablePopupTitle = document.createElement('div');
+                disablePopupTitle.className = 'optionsPopupDisable';
+                disablePopupTitle.innerHTML='disable notifications';
+                box.appendChild(disablePopupTitle);
+                var disablePopup=document.createElement('div');
+                disablePopup.className='disableNotifications'+(options.disablePopup?' checkmark':'');
+                disablePopup.onclick=function(){
+                    if(disablePopup.className.indexOf('checkmark')==-1){
+                        disablePopup.className+=' checkmark';
+                        options.disablePopup=true;
+                        ws.send(JSON.stringify({sys:'saveOptions',value:options}));
+                    }
+                    else{
+                        disablePopup.className=disablePopup.className.replace(' checkmark','');
+                        delete options.disablePopup;
+                        ws.send(JSON.stringify({sys:'saveOptions',value:options}));
+                    }
+                }
+                box.appendChild(disablePopup);
+                
+                
+                var popupTime = document.createElement('div');
+                popupTime.className = 'popupTime';
+                popupTime.setAttribute('contenteditable','true');
+                popupTime.innerHTML = options.popupTime || 'default';
+                popupTime.onfocus=function(){
+                    if(popupTime.innerHTML=='default')
+                        popupTime.innerHTML='';
+                }
+                popupTime.onblur=function(){
+                    popupTime.innerHTML=parseFloat(popupTime.innerHTML)||'default';
+                    var param=popupTime.innerHTML=='default'?null:popupTime.innerHTML;
+                    if(options.popupTime!=param){
+                       options.popupTime=param;
+                    ws.send(JSON.stringify({sys:'saveOptions',value:options}));   
+                    }
+                        
+                }
+                box.appendChild(popupTime);
+                var reset=document.createElement('div');
+                reset.className='optionsReset';
+                box.appendChild(reset);
             }
 
         })();

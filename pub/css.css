@@ -455,3 +455,48 @@ td {
 .my .orderListUser{
     color:green;
 }
+
+.optionsBox {
+    width: 400px;
+    height: 250px;
+    display: block;
+    background-color: #FFF;
+    margin: calc(50vh - 140px) auto 0px;
+    padding: 15px;
+}
+
+.optionsTitle {
+    text-align: center;
+    padding-bottom: 15px;
+}
+
+.optionsPopupDisable {
+    display: inline-block;
+    margin-right: 74px;
+}
+.disableNotifications {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1px solid;
+    margin-bottom: -3px;
+    cursor:pointer;
+}
+
+.popupTime {
+    display: block;
+    padding: 15px 0;
+}
+
+#header > td:first-child{
+    width:40px;
+}
+
+.popupTime::before {
+    content: "notifications closing time, s:";
+    margin-right: 10px;
+}
+
+.checkmark{
+  background: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIiB2ZXJzaW9uPSIxLjAiIHg9IjBweCIgeT0iMHB4IiB3aWR0aD0iMjYiIGhlaWdodD0iMjYiIHZpZXdCb3g9IjAgMCAyNiAyNiIgc3R5bGU9Im51bGwiIGZpbGw9IiMzNDk4ZGIiID4gICAgPHBhdGggZD0iTTIyLjU2Nyw0LjczbC0xLjc5NS0xLjIxOWMtMC40OTUtMC4zMzQtMS4xNzMtMC4yMDUtMS41MDcsMC4yODdsLTguNzg3LDEyLjk1OWwtNC4wMzktNC4wMzkgYy0wLjQyMi0wLjQyLTEuMTEtMC40Mi0xLjUzMywwbC0xLjUzMywxLjUzNmMtMC40MjQsMC40MjMtMC40MjQsMS4xMSwwLDEuNTM0TDkuNTgyLDIyYzAuMzQ5LDAuMzQ3LDAuODk1LDAuNjE1LDEuMzg3LDAuNjE1IHMwLjk4OC0wLjMxLDEuMzA3LTAuNzc0TDIyLjg1Niw2LjIzNUMyMy4xOTEsNS43NDMsMjMuMDYyLDUuMDY2LDIyLjU2Nyw0LjczeiI+PC9wYXRoPjwvc3ZnPg==) center/cover no-repeat;   
+}

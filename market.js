@@ -31,8 +31,28 @@ var dbFindUser = function (db, username, callback) {
     });
 };
 
+var dbFindUserOptions = function (db, userid, callback) {
+    var cursor = db.collection('userOptions').find({userid: userid});
+    var result = [];
+    cursor.each(function (err, doc) {
+        assert.equal(err, null);
+        if (doc != null) {
+            result.push(doc);
+        } else {
+            callback(result);
+        }
+    });
+};
+
 var dbInsertUser = function (db, username, password, callback) {
     db.collection('users').insertOne({user: username, password: password}, function (err, result) {
+        assert.equal(err, null);
+        callback(result);
+    });
+}
+
+var dbInsertUserOptions = function (db, obj, callback) {
+    db.collection('userOptions').insertOne(obj, function (err, result) {
         assert.equal(err, null);
         callback(result);
     });
@@ -72,6 +92,13 @@ var dbDellOrder = function (db, id, callback) {
 
 var dbUpdateUser = function (db, find, obj, callback) {
     db.collection('users').updateOne(find,
+            {$set: obj}, function (err, result) {
+        callback(result);
+    })
+}
+
+var dbUpdateUserOptions = function (db, find, obj, callback) {
+    db.collection('userOptions').updateOne(find,
             {$set: obj}, function (err, result) {
         callback(result);
     })
@@ -159,22 +186,28 @@ ws.on('connection', function (socket) {
                             assert.equal(null, err);
                             dbFindUser(db, data.name, function (result) {
                                 if (result.length != 0) {
-                                    db.close();
-                                    if (result[0].password != data.pass)
+                                    
+                                    if (result[0].password != data.pass){
+                                        db.close();
                                         socket.send(JSON.stringify({sys: 'changeName'}));
+                                    }
                                     else {
                                         socket.isadmin = result[0].isadmin;
                                         socket.userid = result[0]._id;
                                         socket.name = data.name;
-                                        socket.send(JSON.stringify({sys: 'login', name: data.name, isadmin: result[0].isadmin}));
+                                        dbFindUserOptions(db,result[0]._id,function(res){
+                                            db.close();
+                                            socket.send(JSON.stringify({sys: 'login', name: data.name, isadmin: result[0].isadmin,options:res[0]?res[0].options:null}));
+                                        })
+                                        
                                     }
 
                                 } else {
                                     dbInsertUser(db, data.name, data.pass, function (result) {
+                                        db.close();
                                         socket.userid = result.insertedId;
                                         socket.name = data.name;
                                         socket.send(JSON.stringify({sys: 'login', name: data.name}));
-                                        db.close();
                                     });
                                 }
                             });
@@ -352,10 +385,26 @@ ws.on('connection', function (socket) {
                         })
                     })
                     break;
+                case 'saveOptions':
+                    MongoClient.connect(url, function (err, db) {
+                        assert.equal(null, err);
+                        var prop = {options: {}};
+                        prop.options = data.value;
+                        dbUpdateUserOptions(db, {userid: socket.userid}, prop, function (res) {
+                            if (res.modifiedCount == 0) {
+                                prop['userid'] = socket.userid;
+                                dbInsertUserOptions(db, prop, function (res) {
+                                    db.close();
+                                })
+                            } else
+                                db.close();
 
+                        })
+                    })
+                    break;
                 default:
                     console.log('wrong command: s%', data.sys);
-                }
+            }
         }
         //file
         else {
