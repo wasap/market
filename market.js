@@ -186,20 +186,19 @@ ws.on('connection', function (socket) {
                             assert.equal(null, err);
                             dbFindUser(db, data.name, function (result) {
                                 if (result.length != 0) {
-                                    
-                                    if (result[0].password != data.pass){
+
+                                    if (result[0].password != data.pass) {
                                         db.close();
                                         socket.send(JSON.stringify({sys: 'changeName'}));
-                                    }
-                                    else {
+                                    } else {
                                         socket.isadmin = result[0].isadmin;
                                         socket.userid = result[0]._id;
                                         socket.name = data.name;
-                                        dbFindUserOptions(db,result[0]._id,function(res){
+                                        dbFindUserOptions(db, result[0]._id, function (res) {
                                             db.close();
-                                            socket.send(JSON.stringify({sys: 'login', name: data.name, isadmin: result[0].isadmin,options:res[0]?res[0].options:null}));
+                                            socket.send(JSON.stringify({sys: 'login', name: data.name, isadmin: result[0].isadmin, options: res[0] ? res[0].options : null}));
                                         })
-                                        
+
                                     }
 
                                 } else {
