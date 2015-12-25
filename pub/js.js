@@ -187,7 +187,7 @@
                     acceptBtn.className = 'accept';
                     dialogDiv.appendChild(acceptBtn);
                     acceptBtn.onclick = function (e) {
-                        popup(e, 'Password is changed');
+                        popup(e, 'Password was changed');
                         ws.send(JSON.stringify({sys: 'changePass', pas: inputPas.value}));
                         localStorage.setItem('p', inputPas.value);
                         document.body.removeChild(back);
@@ -676,7 +676,7 @@
                         breakPassword.title = 'Make blank password';
                         row.appendChild(breakPassword);
                         breakPassword.onclick = function (e) {
-                            popup(e, 'Password is set to blank');
+                            popup(e, 'Password was set to blank');
                             ws.send(JSON.stringify({sys: 'adminBreakPass', name: item.name}))
                         }
 
