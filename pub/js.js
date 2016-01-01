@@ -149,7 +149,6 @@
                 localStorage.setItem('name', name);
                 user = name;
                 ws.send(JSON.stringify({sys: 'getList'}));
-                document.body.innerHTML = '';
                 var topPanel = document.createElement('div');
                 topPanel.id = 'top';
                 document.body.appendChild(topPanel);
@@ -596,7 +595,7 @@
                 }
 
                 if (newItem) {
-                    tr.className = 'newItem';
+                    tr.className += ' newItem';
                     tr.scrollIntoView();
                 }
                 if (document.hidden && item.time > new Date() - 50000 && !options.disablePopup) {
@@ -613,7 +612,7 @@
                         notify.onshow = function () {
                             setTimeout(function () {
                                 notify.close();
-                                console.log('notification closed in '+options.popupTime * 1000 + 'ms')
+                                console.log('notification closed in ' + options.popupTime * 1000 + 'ms')
                             }, options.popupTime * 1000)
                         }
                     }
@@ -648,7 +647,7 @@
                     row.appendChild(status);
                     var username = document.createElement('div');
                     username.className = 'usersListName' + (item.isadmin ? ' userAdmin' : '') + ' orderListUser';
-                    username.innerHTML = item.name;
+                    username.textContent = item.name;
                     username.onclick = function () {
                         promptProfile(item.name);
                     }
@@ -715,7 +714,7 @@
                 var progressBar = document.createElement('div');
                 var title = document.createElement('div');
                 title.className = 'profile Title';
-                title.innerHTML = data.user + '\'s profile';
+                title.textContent = data.user + '\'s profile';
                 dialogMyProfile.appendChild(title);
                 if (my) {
                     var avatarInput = document.createElement('input');

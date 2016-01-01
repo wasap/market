@@ -80,7 +80,10 @@ var dbInsertOrder = function (db, data, callback) {
 
 var dbUpdateOrder = function (db, param, data, callback) {
     db.collection('orders').replaceOne(param, data, function (err, result) {
-        callback(result.ops[0]);
+        if (result.modifiedCount != 0)
+            callback(result.ops[0])
+        else
+            (callback(null));
     })
 }
 
@@ -244,6 +247,11 @@ ws.on('connection', function (socket) {
                             assert.equal(null, err);
                             dbUpdateOrder(db, {_id: ObjectId(data.id), user: socket.name}, order, function (result) {
                                 db.close();
+                                if (result == null) {
+                                    socket.send(JSON.stringify({sys: 'no rows affected'}));
+                                    return;
+                                }
+
                                 result._id = data.id;
                                 broadcast(JSON.stringify({sys: 'drawItem', item: result}));
                             });
@@ -256,6 +264,7 @@ ws.on('connection', function (socket) {
                             if (res[0] == null || (res[0].user != socket.name && !socket.isadmin)) {
                                 db.close();
                                 console.log('cheater stopped %', socket.name);
+                                socket.send(JSON.stringify({sys:'you are not admin and it is not your order'}));
                             } else {
                                 dbDellOrder(db, data.id, function (responce) {
                                     db.close()
@@ -356,7 +365,7 @@ ws.on('connection', function (socket) {
                         assert.equal(null, err);
                         dbFindUser(db, data.name == null ? socket.name : data.name, function (result) {
                             db.close();
-                            var res = result[0];
+                            var res = result[0]||{};
                             delete res.password;
                             socket.send(JSON.stringify({sys: "userProfile", data: res}))
                         })
