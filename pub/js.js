@@ -5,7 +5,26 @@
  */
 
         (function () {
-            var ws, tbody, user, id, bg, orders = [], filterEl = {}, dialogUsersList, isadmin, dialogMyProfile, options;
+            window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection ||
+                    window.webkitRTCPeerConnection || window.msRTCPeerConnection;
+            window.RTCSessionDescription = window.RTCSessionDescription || window.mozRTCSessionDescription ||
+                    window.webkitRTCSessionDescription || window.msRTCSessionDescription;
+
+            navigator.getUserMedia = navigator.getUserMedia || navigator.mozGetUserMedia ||
+                    navigator.webkitGetUserMedia || navigator.msGetUserMedia;
+
+            var logError = function (e) {
+                console.dir(e);
+            }
+            var dateOptions = {
+                day: "numeric", month: "numeric"
+                , hour: "2-digit", minute: "2-digit"
+            };
+
+            var stunServers = {"iceServers": [{"urls": ['stun:' + window.location.hostname + ':6215',
+                            'stun:' + window.location.hostname + ':6214']}]}
+
+            var ws, tbody, user, id, bg, orders = [], filterEl = {}, dialogUsersList, isadmin, dialogMyProfile, options, peerConnections = [], chats = [];
             startWs();
             if (Notification)
                 if (Notification.permission !== "granted")
@@ -20,7 +39,7 @@
                 ws.onopen = function () {
                     ws.send(JSON.stringify({sys: 'name', name: localStorage.getItem('name'), pass: localStorage.getItem('p')}));
                     ws.onmessage = function (evt) {
-                        console.log(evt.data);
+                        //console.log(evt.data);
                         var data = JSON.parse(evt.data);
                         switch (data.sys) {
                             case 'enterName':
@@ -80,7 +99,12 @@
                                         avatar.removeAttribute('style');
                                 }
                                 break;
-
+                            case "RTCOffer":
+                                handleOffer(data.offer, data.chatId, data.name);
+                                break;
+                            case 'RTCAnswer':
+                                handleAnswer(data.answer, data.chatId);
+                                break;
                             default:
                                 console.log('i dont know command: %s', data.sys);
                         }
@@ -112,7 +136,7 @@
                 box.id = 'loginBox';
                 bg.appendChild(box);
                 var title = document.createElement('div');
-                title.innerHTML = text;
+                title.textContent = text;
                 title.id = 'loginTitle';
                 box.appendChild(title);
                 var inp = document.createElement('input');
@@ -220,7 +244,7 @@
                     }
                     back.appendChild(dialogUsersList);
                     var closeBtn = document.createElement('div');
-                    closeBtn.className = 'closeBtn';
+                    closeBtn.className = 'closeBtn close';
                     closeBtn.onclick = function () {
                         document.body.removeChild(back);
                         dialogUsersList.innerHTML = '';
@@ -453,6 +477,19 @@
                     });
                     filterBg.style.display = 'none';
                 };
+
+                var messages = document.createElement('div');
+                messages.id = 'openChat';
+                messages.onclick = function () {
+                    openChat(null);
+                }
+                topPanel.appendChild(messages);
+
+                var unread = document.createElement('div');
+                unread.className = 'unreadMessages';
+                unread.style.display = 'none';
+                messages.appendChild(unread);
+
                 var workspace = document.createElement('div');
                 workspace.id = 'center';
                 var table = document.createElement('table');
@@ -562,9 +599,9 @@
                 var dat = document.createElement('td');
                 dat.textContent = new Date(item.time).toLocaleString();
                 tr.appendChild(dat);
+                var actions = document.createElement('td');
+                tr.appendChild(actions);
                 if (my) {
-                    var actions = document.createElement('td');
-                    tr.appendChild(actions);
                     var modify = document.createElement('div');
                     modify.className = 'modify';
                     actions.appendChild(modify);
@@ -584,14 +621,22 @@
                         ws.send(JSON.stringify({sys: 'dellItem', id: item._id}));
                     };
                 } else if (isadmin) {
-                    var actions = document.createElement('td');
-                    tr.appendChild(actions);
                     var del = document.createElement('div');
                     del.className = 'delete';
                     actions.appendChild(del);
                     del.onclick = function () {
                         ws.send(JSON.stringify({sys: 'dellItem', id: item._id, name: user}));
                     };
+                }
+
+                if (!my) {
+                    var startChat = document.createElement('div');
+                    startChat.title = 'Open chat';
+                    startChat.className = 'startChat';
+                    startChat.onclick = function () {
+                        openChat(item.user);
+                    }
+                    actions.appendChild(startChat);
                 }
 
                 if (newItem) {
@@ -688,6 +733,16 @@
                         }
 
                     }
+                    if (user != item.name) {
+                        var startChat = document.createElement('div');
+                        startChat.title = 'Open chat';
+                        startChat.className = 'startChat';
+                        startChat.onclick = function () {
+                            openChat(item.name);
+                        }
+                        row.appendChild(startChat);
+                    }
+
 
                 })
             }
@@ -698,7 +753,7 @@
                 window.setAttribute('style', 'left:' + (ev.clientX - 170) + 'px;top:' + (ev.clientY) + 'px;');
                 if (color != null)
                     window.style.backgroundColor = color;
-                console.log(window.style.backgroundColor)
+                //console.log(window.style.backgroundColor)
                 window.className = 'popup';
                 window.innerHTML = text;
 
@@ -770,27 +825,27 @@
                 var skype = document.createElement('div');
                 skype.className = 'skypeProfile';
                 if (data.skype != null)
-                    skype.innerHTML = my ? data.skype : '<a href="skype:' + data.skype + '?chat">' + data.skype + '</a>';
+                    skype.textContent = my ? data.skype : '<a href="skype:' + data.skype + '?chat">' + data.skype + '</a>';
                 if (my)
                     skype.onclick = function () {
-                        var oldValue = skype.innerHTML;
+                        var oldValue = skype.textContent;
                         skype.setAttribute('contenteditable', 'true');
                         skype.focus();
                         skype.onblur = function () {
-                            if (oldValue == skype.innerHTML)
+                            if (oldValue == skype.textContent)
                                 return
                             skype.removeAttribute('contenteditable');
                             Array.prototype.forEach.call(skype.childNodes, function (n) {
                                 if (n.nodeType == 1 && n.nodeName != 'BR')
                                     skype.replaceChild(document.createTextNode(n.textContent))
                             })
-                            ws.send(JSON.stringify({sys: 'updateProfile', prop: 'skype', value: skype.innerHTML}))
+                            ws.send(JSON.stringify({sys: 'updateProfile', prop: 'skype', value: skype.textContent}))
                         }
                     }
                 dialogMyProfile.appendChild(skype);
                 var comment = document.createElement('div');
                 if (data.comment != null)
-                    comment.innerHTML = data.comment;
+                    comment.innerHTML = safetyInnerHTML(data.comment);
                 comment.className = 'commentProfile';
                 if (my)
                     comment.onclick = function () {
@@ -851,7 +906,7 @@
                 box.appendChild(title);
                 var disablePopupTitle = document.createElement('div');
                 disablePopupTitle.className = 'optionsPopupDisable';
-                disablePopupTitle.innerHTML = 'disable notifications';
+                disablePopupTitle.textContent = 'disable notifications';
                 box.appendChild(disablePopupTitle);
                 var disablePopup = document.createElement('div');
                 disablePopup.className = 'disableNotifications' + (options.disablePopup ? ' checkmark' : '');
@@ -872,14 +927,14 @@
                 var popupTime = document.createElement('div');
                 popupTime.className = 'popupTime';
                 popupTime.setAttribute('contenteditable', 'true');
-                popupTime.innerHTML = options.popupTime || 'default';
+                popupTime.textContent = options.popupTime || 'default';
                 popupTime.onfocus = function () {
-                    if (popupTime.innerHTML == 'default')
-                        popupTime.innerHTML = '';
+                    if (popupTime.textContent == 'default')
+                        popupTime.textContent = '';
                 }
                 popupTime.onblur = function () {
-                    popupTime.innerHTML = parseFloat(popupTime.innerHTML) || 'default';
-                    var param = popupTime.innerHTML == 'default' ? null : popupTime.innerHTML;
+                    popupTime.textContent = parseFloat(popupTime.textContent) || 'default';
+                    var param = popupTime.textContent == 'default' ? null : popupTime.textContent;
                     if (options.popupTime != param) {
                         options.popupTime = param;
                         ws.send(JSON.stringify({sys: 'saveOptions', value: options}));
@@ -887,9 +942,415 @@
 
                 }
                 box.appendChild(popupTime);
+                var chatHeight = document.createElement('div');
+                chatHeight.className = 'chatHeight';
+                chatHeight.setAttribute('contenteditable', 'true');
+                chatHeight.textContent = options.chatBoxHeight || 'default';
+                chatHeight.onfocus = function () {
+                    if (chatHeight.textContent == 'default')
+                        chatHeight.textContent = '';
+                }
+                chatHeight.onblur = function () {
+                    if (chatHeight.textContent == '')
+                        chatHeight.textContent = 'default'
+
+                    var param = chatHeight.textContent == 'default' ? null : chatHeight.textContent;
+                    if (options.chatBoxHeight != param) {
+                        options.chatBoxHeight = param;
+                        ws.send(JSON.stringify({sys: 'saveOptions', value: options}));
+                    }
+
+                }
+                box.appendChild(chatHeight);
+
+                var chatWidth = document.createElement('div');
+                chatWidth.className = 'chatWidth';
+                chatWidth.setAttribute('contenteditable', 'true');
+                chatWidth.textContent = options.chatBoxWidth || 'default';
+                chatWidth.onfocus = function () {
+                    if (chatWidth.textContent == 'default')
+                        chatWidth.textContent = '';
+                }
+                chatWidth.onblur = function () {
+                    if (chatWidth.textContent == '')
+                        chatHeight.textContent = 'default'
+                    var param = chatWidth.textContent == 'default' ? null : chatWidth.textContent;
+                    if (options.chatBoxWidth != param) {
+                        options.chatBoxWidth = param;
+                        ws.send(JSON.stringify({sys: 'saveOptions', value: options}));
+                    }
+
+                }
+                box.appendChild(chatWidth);
+
+                var chatTransform = document.createElement('div');
+                chatTransform.className = 'chatTransform';
+                chatTransform.setAttribute('contenteditable', 'true');
+                chatTransform.textContent = options.chatTransform || 'default';
+                chatTransform.onfocus = function () {
+                    if (chatTransform.textContent == 'default')
+                        chatTransform.textContent = '';
+                }
+                chatTransform.onblur = function () {
+                    if (chatTransform.textContent == '' || !chatTransform.textContent.match(/[-0-9]+px, [-0-9]+px$/))
+                        chatTransform.textContent = 'default'
+                    var param = chatTransform.textContent == 'default' ? null : chatTransform.textContent;
+                    if (options.chatTransform != param) {
+                        options.chatTransform = param;
+                        ws.send(JSON.stringify({sys: 'saveOptions', value: options}));
+                    }
+
+                }
+                box.appendChild(chatTransform);
+
                 var reset = document.createElement('div');
                 reset.className = 'optionsReset';
                 box.appendChild(reset);
+            }
+
+            function openChat(user) {
+                //console.log(user);
+
+                var chatBox = document.createElement('div');
+                chatBox.className = 'chatBox';
+                chatBox.setAttribute('style', 'width:' + (options.chatBoxWidth || '300px') +
+                        ';height:' + (options.chatBoxHeight || '200px') +
+                        ';transform:translate(' + (options.chatTransform || '0px, 0px') + ');');
+
+
+                chatBox.onmouseup = function (e) {
+                    if (e.target != chatBox)
+                        return;
+                    if (chatBox.style.width != '' || chatBox.style.height != '') {
+                        if (chatBox.style.width != options.chatBoxWidth || chatBox.style.height != options.chatBoxHeight) {
+                            options.chatBoxWidth = chatBox.style.width;
+                            options.chatBoxHeight = chatBox.style.height;
+                            ws.send(JSON.stringify({sys: 'saveOptions', value: options}));
+                        }
+                    }
+                }
+                document.body.appendChild(chatBox);
+
+
+                if (user) {
+                    var chatId = user + '-' + parseInt(Math.random() * 0x666).toString(16) + '-' + Date.now();
+                    chats.push({chatId: chatId, messages: []})
+                    createOffer(user, chatId);
+                    drawMessagesBox(chatBox, user, chatId);
+                } else
+                    drawChatsBox(chatBox);
+            }
+
+            function drawMessagesBox(chatBox, User, chatId) {
+                chatBox.innerHTML = '';
+
+                var movingBar = createMovingBar(chatBox, 'chat with ' + User);
+                chatBox.appendChild(movingBar);
+
+                var back = document.createElement('div');
+                back.className = 'chatBoxGoBack';
+                back.onclick = function () {
+                    drawChatsBox(chatBox);
+                }
+                movingBar.appendChild(back);
+
+
+
+                var messagesBox = document.createElement('div');
+                messagesBox.className = 'chatBoxMessages';
+                messagesBox.id = chatId;
+                chatBox.appendChild(messagesBox);
+
+
+
+                var input = document.createElement('div');
+                input.setAttribute('contenteditable', 'true');
+                input.className = 'chatBoxInput';
+                chatBox.appendChild(input);
+                input.onkeydown = function (e) {
+                    if (e.keyCode == 13)
+                        send.onclick();
+                }
+
+                var dc;
+                peerConnections.some(function (peer) {
+                    if (peer.chatId == chatId) {
+                        dc = peer.dc;
+                        return true
+                    } else
+                        return false;
+                })
+
+
+                var chatMessages;
+                chats.some(function (ch) {
+                    if (ch.chatId == chatId) {
+                        if (ch.unread) {
+                            var ur = document.getElementsByClassName('unreadMessages')[0];
+                            ur.innerHTML = parseInt(ur.innerHTML) - ch.unread;
+                            if (ur.innerHTML == '0')
+                                ur.style.display = 'none';
+                            delete ch.unread;
+                        }
+                        chatMessages = ch.messages;
+                        return true;
+                    } else
+                        return false;
+                })
+
+                chatMessages.forEach(function (m) {
+                    drawMessage(m, messagesBox);
+
+                })
+
+                var send = document.createElement('div');
+                send.className = 'chatBoxSend';
+                send.onclick = function () {
+                    if (input.textContent.length == 0)
+                        return;
+                    //console.log(dc)
+                    var message = {user: user, chatId: chatId, text: input.innerHTML, time: Date.now()}
+                    chatMessages.push(message)
+                    input.innerHTML = '';
+                    drawMessage(message, messagesBox);
+                    if (dc && dc.readyState == 'open')
+                        dc.send(JSON.stringify(message));
+                }
+                chatBox.appendChild(send);
+
+                var attachFileIcon = document.createElement('div');
+                attachFileIcon.className = 'chatBoxFileIcon';
+                chatBox.appendChild(attachFileIcon);
+
+                var attachFile = document.createElement('input');
+                attachFile.type = 'file';
+                attachFile.multiple = 'true';
+                attachFile.className = 'chatBoxFileInput';
+                attachFileIcon.appendChild(attachFile);
+            }
+
+            function drawChatsBox(chatBox) {
+                chatBox.innerHTML = '';
+                chatBox.appendChild(createMovingBar(chatBox, 'history'));
+                var historyBox = document.createElement('div');
+                historyBox.className = 'chatBoxHistory';
+                chatBox.appendChild(historyBox);
+                function createHistoryItem(i) {
+                    //console.log(i)
+                    var row = document.createElement('div');
+                    row.className = 'chatBoxHistoryRow';
+                    row.onclick = function () {
+                        drawMessagesBox(chatBox, i.chatId.split('-')[0], i.chatId);
+                    }
+                    var username = document.createElement('div');
+                    username.className = 'chatBoxHistoryUser';
+                    username.textContent = i.chatId.split('-')[0];
+                    username.onclick = function (e) {
+                        e.stopPropagation();
+                        promptProfile(username.innerHTML);
+                    }
+                    row.appendChild(username);
+
+                    var time = document.createElement('div');
+                    time.className = 'chatBoxHistoryTime';
+                    row.appendChild(time);
+
+                    var lastMsg = document.createElement('div');
+                    lastMsg.className = 'chatBoxHistoryLast';
+                    row.appendChild(lastMsg);
+                    if (i.unread) {
+                        var unread = document.createElement('div');
+                        unread.innerHTML = i.unread;
+                        unread.className = 'chatBoxistoryUnread';
+                        row.appendChild(unread);
+                    }
+
+                    var last = i.messages[i.messages.length - 1];
+                    if (last) {
+                        lastMsg.innerHTML = safetyInnerHTML(last.text);
+                        time.innerHTML = new Date(last.time).toLocaleDateString('en-us', dateOptions);
+                    } else
+                        lastMsg.innerHTML = 'no messages yet';
+
+                    return row;
+                }
+                chats.forEach(function (chat) {
+                    historyBox.appendChild(createHistoryItem(chat));
+                })
+            }
+
+            function createMovingBar(chatBox, textContent) {
+                var movingBar = document.createElement('div');
+                movingBar.textContent = textContent;
+                movingBar.className = 'chatBoxMovingBar';
+                movingBar.onmousedown = function (ev) {
+                    var last = {x: ev.clientX, y: ev.clientY};
+                    function chatMove(e) {
+                        var param = chatBox.style.transform.match(/\(([-0-9]+)px, ([-0-9]+)px\)/);
+                        chatBox.style.transform = 'translate(' + (parseInt(param[1]) + e.clientX - last.x) + 'px, ' + (parseInt(param[2]) + e.clientY - last.y) + 'px)';
+                        last = {x: e.clientX, y: e.clientY};
+                    }
+                    function chatMoveEnd() {
+                        window.removeEventListener('mousemove', chatMove);
+                        window.removeEventListener('mouseup', chatMoveEnd);
+                        var pos = chatBox.style.transform.match(/\((.*)\)/)[1];
+                        //console.log(pos)
+                        if (options.chatTransform != pos) {
+                            options.chatTransform = pos;
+                            ws.send(JSON.stringify({sys: 'saveOptions', value: options}));
+                        }
+
+                    }
+
+
+                    window.addEventListener('mousemove', chatMove)
+
+                    window.addEventListener('mouseup', chatMoveEnd);
+                }
+
+
+                var closeChat = document.createElement('div');
+                closeChat.className = 'chatBoxClose close';
+                closeChat.onclick = function () {
+                    document.body.removeChild(chatBox);
+                }
+                movingBar.appendChild(closeChat);
+                return movingBar;
+            }
+
+
+            function createOffer(name, chatId) {
+                var pc1 = new RTCPeerConnection(stunServers),
+                        dc1 = null;
+
+                pc1.onicecandidate = function (e) {
+                    //console.log('candidate', e)
+                    if (e.candidate == null)
+                        ws.send(JSON.stringify({sys: 'RTCOffer', offer: pc1.localDescription, chatId: chatId, name: name}))
+                }
+
+                dc1 = pc1.createDataChannel('test');
+                //console.log("Created datachannel (pc1)");
+                manageDataChannel(dc1, chatId);
+
+
+                pc1.createOffer(function (offer) {
+                    pc1.setLocalDescription(offer, function () {
+                    }, logError)
+                }, function (e) {
+                    //console.log(e)
+                }, logError)
+
+                peerConnections.push({pc: pc1, dc: dc1, chatId: chatId});
+            }
+
+            function handleOffer(offer, chatId, name) {
+                var pc1 = new RTCPeerConnection(stunServers),
+                        dc1 = null;
+                pc1.onicecandidate = function (e) {
+                    //console.log('candidate', e)
+                    if (e.candidate == null)
+                        ws.send(JSON.stringify({sys: 'RTCAnswer', answer: pc1.localDescription, chatId: chatId, name: name}))
+                }
+
+                pc1.setRemoteDescription(new RTCSessionDescription(new RTCSessionDescription(offer)), function () {
+                    pc1.createAnswer(function (answer) {
+                        pc1.setLocalDescription(answer)
+                    }, function () {}, function () {})
+                }, function (e) {
+                    //console.log(e)
+                })
+
+                pc1.ondatachannel = function (e) {
+                    dc1 = e.channel || e;
+                    chatId = name + chatId.substr(chatId.indexOf('-'), chatId.length);
+                    peerConnections.push({pc: pc1, dc: dc1, chatId: chatId});
+                    chats.push({chatId: chatId, messages: []})
+                    manageDataChannel(dc1, chatId);
+                }
+            }
+
+            function handleAnswer(answer, chatId) {
+                peerConnections.some(function (peer) {
+                    if (peer.chatId == chatId) {
+                        peer.pc.setRemoteDescription(new RTCSessionDescription(answer));
+                        //console.log('answer')
+                        return true;
+                    } else
+                        return false;
+                })
+
+            }
+
+            function manageDataChannel(dc1, chatId) {
+                var chat;
+                chats.some(function (ch) {
+                    if (ch.chatId == chatId) {
+                        chat = ch;
+                        return true;
+                    } else
+                        return false;
+                })
+                dc1.onopen = function (e) {
+                    //console.log('data channel connect', e);
+                }
+                dc1.onmessage = function (e) {
+
+                    //console.log("Got message (pc1)", e.data);
+                    var data = JSON.parse(e.data)
+                    //console.log(data)
+                    chat.messages.push(data);
+                    var messagesBox = document.getElementById(chatId);
+                    if (messagesBox)
+                        drawMessage(data, messagesBox)
+                    else {
+                        chat.unread = (chat.unread || 0) + 1;
+                        var unread = document.getElementsByClassName('unreadMessages')[0];
+                        unread.style.removeProperty('display');
+                        unread.innerHTML = (parseInt(unread.innerHTML) || 0) + 1;
+                        unread = null;
+
+                        if (document.getElementsByClassName('chatBoxHistory')[0])
+                            drawChatsBox(document.getElementsByClassName('chatBox')[0]);
+                    }
+                }
+                dc1.onclose = function () {
+                    peerConnections.some(function (peer, index) {
+                        if (peer.dc == dc1) {
+                            peer.pc.close();
+                            peerConnections.splice(index, 1);
+                            return true;
+                        } else
+                            return false;
+                    })
+                }
+            }
+
+            function drawMessage(m, messagesBox) {
+                var row = document.createElement('div');
+                row.className = 'chatMessageRow';
+                messagesBox.appendChild(row);
+                var time = document.createElement('div');
+                time.className = 'chatMessageTime';
+                time.innerHTML = new Date(m.time).toLocaleDateString('en-us', dateOptions);
+                row.appendChild(time);
+
+                var messageText = document.createElement('div');
+                messageText.className = 'chatMessageText';
+                messageText.innerHTML = safetyInnerHTML(m.text);
+                row.appendChild(messageText);
+                if (m.user == user)
+                    messageText.className += ' chatMessageTextMy';
+                row.scrollIntoView();
+            }
+
+            function safetyInnerHTML(text) {
+                //todo later
+                var t=document.createElement('div');
+                t.innerHTML=text;
+                text=t.textContent.replace('\n','<br>');
+                t=null;
+                return text;
             }
 
         })();

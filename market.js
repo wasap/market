@@ -8,15 +8,29 @@ var http = require('http')
         , wss = require('ws').Server,
         fs = require('fs'),
         mime = require('mime'),
-        urlquery = require('url');
+        urlquery = require('url'),
+        myIp=require('ip').address();
 var server = http.createServer(function (req, res) {
     sendFile(urlquery.parse(req.url).pathname, res);
 });
+
 
 var MongoClient = require('mongodb').MongoClient;
 var assert = require('assert');
 var ObjectId = require('mongodb').ObjectID;
 var url = 'mongodb://localhost:27017/test';
+
+//stun
+var stunsrv = require('stunsrv');
+var tunServer = stunsrv.createServer();
+tunServer.setAddress0(myIp);
+tunServer.setAddress1(myIp);
+tunServer.setPort0(6214);
+tunServer.setPort1(6215);
+tunServer.setResponseAddress0(myIp);
+tunServer.setResponseAddress1(myIp);
+tunServer.listen();
+
 
 var dbFindUser = function (db, username, callback) {
     var cursor = db.collection('users').find({user: username});
@@ -410,6 +424,18 @@ ws.on('connection', function (socket) {
                         })
                     })
                     break;
+                case 'RTCOffer':
+                clients.forEach(function(client){
+                    if(client.name==data.name)
+                        client.send(JSON.stringify({sys:'RTCOffer',offer:data.offer,chatId:data.chatId,name:socket.name}));
+                })         
+                         break;
+                     case 'RTCAnswer':
+                clients.forEach(function(client){
+                    if(client.name==data.name)
+                        client.send(JSON.stringify({sys:'RTCAnswer',answer:data.answer,chatId:data.chatId,name:socket.name}));
+                })      
+                     break;
                 default:
                     console.log('wrong command: s%', data.sys);
             }
