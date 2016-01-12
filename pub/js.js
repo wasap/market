@@ -1033,9 +1033,31 @@
 
 
                 if (user) {
-                    var chatId = user + '-' + parseInt(Math.random() * 0x666).toString(16) + '-' + Date.now();
-                    chats.push({chatId: chatId, messages: []})
-                    createOffer(user, chatId);
+                    var chatId;
+                    chats.some(function (ch) {
+                        if (ch.chatId.match(/(.+?)-/)[1] == user) {
+                            chatId = ch.chatId;
+                            return true;
+                        }
+                        return false;
+
+                    })
+
+                    if (chatId == null) {
+                        chatId = user + '-' + parseInt(Math.random() * 0x666).toString(16) + '-' + Date.now();
+                        chats.push({chatId: chatId, messages: []})
+                    }
+                    var peer;
+                    peerConnections.some(function (p) {
+                        if (p.chatId.match(/(.+?)-/)[1] == user) {
+                            peer = p;
+                            return true;
+                        }
+                        return false;
+                    })
+
+                    if (peer == null || (peer != null && peer.dc.readyState != 'open'))
+                        createOffer(user, chatId);
                     drawMessagesBox(chatBox, user, chatId);
                 } else
                     drawChatsBox(chatBox);
@@ -1346,10 +1368,10 @@
 
             function safetyInnerHTML(text) {
                 //todo later
-                var t=document.createElement('div');
-                t.innerHTML=text;
-                text=t.textContent.replace('\n','<br>');
-                t=null;
+                var t = document.createElement('div');
+                t.innerHTML = text;
+                text = t.textContent.replace('\n', '<br>');
+                t = null;
                 return text;
             }
 
