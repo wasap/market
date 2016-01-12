@@ -825,7 +825,7 @@
                 var skype = document.createElement('div');
                 skype.className = 'skypeProfile';
                 if (data.skype != null)
-                    skype.textContent = my ? data.skype : '<a href="skype:' + data.skype + '?chat">' + data.skype + '</a>';
+                    skype.innerHTML = my ? data.skype : '<a href="skype:' + data.skype + '?chat">' + data.skype + '</a>';
                 if (my)
                     skype.onclick = function () {
                         var oldValue = skype.textContent;
@@ -1045,7 +1045,7 @@
 
                     if (chatId == null) {
                         chatId = user + '-' + parseInt(Math.random() * 0x666).toString(16) + '-' + Date.now();
-                        chats.push({chatId: chatId, messages: []})
+                        chats.push({chatId: chatId, messages: [{user: 'system', chatId: chatId, text: 'connecting to peer...', time: Date.now()}]})
                     }
                     var peer;
                     peerConnections.some(function (p) {
@@ -1127,16 +1127,28 @@
 
                 var send = document.createElement('div');
                 send.className = 'chatBoxSend';
-                send.onclick = function () {
+                send.onclick = function (e) {
                     if (input.textContent.length == 0)
                         return;
                     //console.log(dc)
                     var message = {user: user, chatId: chatId, text: input.innerHTML, time: Date.now()}
-                    chatMessages.push(message)
+                    
                     input.innerHTML = '';
-                    drawMessage(message, messagesBox);
-                    if (dc && dc.readyState == 'open')
+                    
+                    if (dc==null || dc.readyState != 'open')
+                        peerConnections.some(function(p){
+                            if(p.chatId.match(/(.+?)-/)[1]==User && p.dc.readyState=='open'){
+                                dc=p.dc;  
+                                return true
+                            }
+                            return false;
+                        })
+                        if(dc!=null && dc.readyState=='open'){
                         dc.send(JSON.stringify(message));
+                        drawMessage(message, messagesBox);
+                        chatMessages.push(message)
+                    }
+                    
                 }
                 chatBox.appendChild(send);
 
@@ -1285,9 +1297,20 @@
 
                 pc1.ondatachannel = function (e) {
                     dc1 = e.channel || e;
+                    var exists=chats.some(function(ch){
+                        if(ch.chatId.match(/(.+?)-/)[1]==name){
+                            chatId=ch.chatId;
+                            return true;
+                        }
+                        return false
+                    })
+                    
+                    if(!exists){
                     chatId = name + chatId.substr(chatId.indexOf('-'), chatId.length);
-                    peerConnections.push({pc: pc1, dc: dc1, chatId: chatId});
                     chats.push({chatId: chatId, messages: []})
+                }
+                    peerConnections.push({pc: pc1, dc: dc1, chatId: chatId});
+                    
                     manageDataChannel(dc1, chatId);
                 }
             }
@@ -1314,7 +1337,11 @@
                         return false;
                 })
                 dc1.onopen = function (e) {
-                    //console.log('data channel connect', e);
+                    var msg={user: 'system', chatId: chatId, text: 'peer connected', time: Date.now()};
+                    chat.messages.push(msg);
+                    var curChat=document.getElementById(chatId);
+                    if(curChat!=null)
+                                drawMessage(msg,curChat)
                 }
                 dc1.onmessage = function (e) {
 
@@ -1345,6 +1372,11 @@
                         } else
                             return false;
                     })
+                    var msg={user: 'system', chatId: chatId, text: 'peer disconnected', time: Date.now()};
+                    chat.messages.push(msg)
+                    var curChat=document.getElementById(chatId);
+                    if(curChat!=null)
+                                drawMessage(msg,curChat)
                 }
             }
 
