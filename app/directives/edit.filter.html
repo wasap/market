@@ -1,0 +1,12 @@
+<div style="" class="bg" ng-click="hide()">
+    <div id="filterBox" ng-click="$event.stopPropagation()">
+        <div id="filterTitle">Type</div>
+        <div class="buy filterType" ng-click="type='buy'" ng-class="type=='buy'?'filterTypeChecked':''"></div>
+        <div class="sell filterType" ng-click="type='sell'" ng-class="type=='sell'?'filterTypeChecked':''"></div>
+        <input placeholder="Currency filter" title="[a-z] - only english layout
+hrn|usd - hryvna or dollar" ng-model="currency">
+        <input placeholder="comment" ng-model="comment">
+        <div id="applyFilter" class="checkmark filterButtons" ng-click="hide()"></div>
+        <div id="removeFilter" class="filterButtons" ng-click="removeFilter()"></div>
+    </div>
+</div>

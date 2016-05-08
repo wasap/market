@@ -1,0 +1,10 @@
+<div id="profile" ng-mouseenter="profileMenuVisible=true" ng-mouseleave="profileMenuVisible=false">
+    {{profile.name}}
+    <div id="profileBox" ng-show="profileMenuVisible">
+        <div class="profileText">Change password</div>
+        <div class="profileText">Users list</div>
+        <div class="profileText">Profile</div>
+        <div class="profileText">Options</div>
+        <div class="profileText" id="exit">Exit</div>
+    </div>
+</div>

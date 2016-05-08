@@ -1,0 +1,11 @@
+<div style="" class="bg" ng-click="hide()">
+    <div id="box" ng-click="$event.stopPropagation()">
+        <div id="title">Please enter currency, rate and amount</div>
+        <div ng-class="type" title="Click to change" id="type" ng-click="changeType()"></div>
+        <input placeholder="Amount" id="amount" ng-model="amount">
+        <input placeholder="Currency" id="currency" ng-model="currency">
+        <textarea
+            placeholder="Comment" id="comment" ng-model="comment"></textarea>
+        <div id="save" ng-click="submit($event)"></div>
+    </div>
+</div>

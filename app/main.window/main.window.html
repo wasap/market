@@ -1,0 +1,26 @@
+<div id="top">
+<profile-menu></profile-menu>
+  <div id="add" ng-click="editOrderVisible=true" ></div>
+  <div class="filter" ng-click="editFilterVisible=true"
+       ng-class="filterObj!={}?'filterApplied':''"></div>
+  <div id="openChat">
+    <div style="display: none;" class="unreadMessages"></div>
+  </div>
+</div>
+<div id="center">
+  <div id="tab" ng-init="getOrdersList()">
+    <!--tr id="header">
+        <td>Type</td>
+        <td>User</td>
+        <td>Currency</td>
+        <td>Rate</td>
+        <td>Amount</td>
+        <td>Comment</td>
+        <td>Time</td>
+        <td>Actions</td>
+    </tr-->
+    <list-item item="item" ng-repeat="item in items|filter:{type:filterObj.type,curr:filterObj.currency,comment:filterObj.comment}"></list-item>
+  </div>
+</div>
+<edit-order ng-show="editOrderVisible"></edit-order>
+<edit-filter ng-show="editFilterVisible"></edit-filter>

@@ -1,0 +1,13 @@
+<div class="container">
+    <div class="left">
+        <div class="type {{item.type}}"></div>
+        <div class="orderListUser">{{item.user}}</div>
+    </div>
+    <div class="comment">{{item.comment}}</div>
+    <div>{{item.amount}} {{item.curr}}</div>
+    <div class="date">{{item.time | date:"dd/M/yy HH:MM"}}</div>
+
+    <div>
+        <div class="delete" title="delete order" ng-click="deleteOrder(item)"></div>
+    </div>
+</div>
