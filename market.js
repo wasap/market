@@ -24,7 +24,7 @@ var url = 'mongodb://localhost:27017/test';
 var stunsrv = require('stunsrv');
 var tunServer = stunsrv.createServer();
 tunServer.setAddress0(myIp);
-tunServer.setAddress1(myIp);
+tunServer.setAddress1('127.0.0.1');
 tunServer.setPort0(6214);
 tunServer.setPort1(6215);
 tunServer.setResponseAddress0(myIp);
