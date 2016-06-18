@@ -24,7 +24,8 @@
     "path": ">0.0.1",
     "stunsrv": ">0.0.1",
     "ws": ">0.0.1",
-    "ip":">0.0.1"
+    "ip":">0.0.1",
+    "mongodb":"*"
   },
   "scripts": {
     "start": "node market.js"

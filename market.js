@@ -28,7 +28,7 @@ tunServer.setAddress1('127.0.0.1');
 tunServer.setPort0(6214);
 tunServer.setPort1(6215);
 tunServer.setResponseAddress0(myIp);
-tunServer.setResponseAddress1(myIp);
+// tunServer.setResponseAddress1(myIp);
 tunServer.listen();
 
 
