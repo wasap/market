@@ -1,9 +1,13 @@
 /**
  * Created by q on 04.05.16.
  */
+
+
 var express=require('express');
 var fs=require('fs');
 var app=express();
+
+var HTTP=require('./server/http');
 
 // app.use('/node_modules', express.static('./node_modules' ));
 // app.use('/pub', express.static('./pub' ));
